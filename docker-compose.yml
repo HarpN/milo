@@ -1,0 +1,23 @@
+services:
+  milo:
+    build: .
+    container_name: milo_guide_scraper
+    ports:
+      - "50056:50056"
+    environment:
+      - SERVICE_NAME=milo-guide-scraper
+      - SERVICE_VERSION=0.1.0
+      - GRPC_PORT=50056
+      - JUDY_GRPC_TARGET=host.docker.internal:50052
+      - JUDY_TIMEOUT_SECONDS=10
+      - OUTBOUND_SIGNATURE_HEADER=X-Milo-Signature
+      - OUTBOUND_SIGNATURE_SECRET=milo-dev-secret
+      - OUTBOUND_KEY_ID=milo-k1
+      - SCRAPE_DB_PATH=/data/milo.sqlite3
+      - GUIDE_SOURCE=web
+    volumes:
+      - milo-data:/data
+    restart: unless-stopped
+
+volumes:
+  milo-data:

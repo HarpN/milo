@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "milo.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "milo.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app: milo-guide-scraper
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "milo.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app: milo-guide-scraper
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "milo.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app: milo-guide-scraper
+    spec:
+      serviceAccountName: {{ include "milo.fullname" . }}
+      containers:
+        - name: milo
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.service.port }}
+          env:
+            - name: SERVICE_NAME
+              value: {{ .Values.env.SERVICE_NAME | quote }}
+            - name: SERVICE_VERSION
+              value: {{ .Values.env.SERVICE_VERSION | quote }}
+            - name: GRPC_PORT
+              value: {{ .Values.env.GRPC_PORT | quote }}
+            - name: JUDY_GRPC_TARGET
+              value: {{ .Values.env.JUDY_GRPC_TARGET | quote }}
+            - name: JUDY_TIMEOUT_SECONDS
+              value: {{ .Values.env.JUDY_TIMEOUT_SECONDS | quote }}
+            - name: OUTBOUND_SIGNATURE_HEADER
+              value: {{ .Values.env.OUTBOUND_SIGNATURE_HEADER | quote }}
+            - name: OUTBOUND_KEY_ID
+              value: {{ .Values.env.OUTBOUND_KEY_ID | quote }}
+            - name: GUIDE_SOURCE
+              value: {{ .Values.env.GUIDE_SOURCE | quote }}
+            - name: SCRAPE_DB_PATH
+              value: {{ .Values.env.SCRAPE_DB_PATH | quote }}
+            - name: OUTBOUND_SIGNATURE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "milo.fullname" . }}-secrets
+                  key: OUTBOUND_SIGNATURE_SECRET
+          readinessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
