@@ -136,6 +136,22 @@ class GuideStore:
             )
             connection.execute(
                 """
+                CREATE TABLE IF NOT EXISTS keeper_guides (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source_agent TEXT NOT NULL,
+                    guide_url TEXT NOT NULL,
+                    game_title TEXT NOT NULL,
+                    platform TEXT NOT NULL,
+                    quality_views INTEGER NOT NULL DEFAULT 0,
+                    quality_age_days INTEGER NOT NULL DEFAULT 0,
+                    quality_score REAL NOT NULL DEFAULT 0,
+                    updated_at TEXT NOT NULL,
+                    UNIQUE(guide_url)
+                )
+                """
+            )
+            connection.execute(
+                """
                 CREATE TABLE IF NOT EXISTS keeper_chunk_embeddings (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     source_agent TEXT NOT NULL,
@@ -182,6 +198,24 @@ class GuideStore:
 
         if settings.keeper_export_enabled:
             with self.keeper_connection() as keeper_connection:
+                keeper_connection.execute(
+                    """
+                    INSERT OR REPLACE INTO keeper_guides (
+                        source_agent, guide_url, game_title, platform,
+                        quality_views, quality_age_days, quality_score, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        "milo",
+                        guide_document.guide_url,
+                        guide_document.game_title,
+                        guide_document.platform,
+                        guide_document.quality_views,
+                        guide_document.quality_age_days,
+                        guide_document.quality_score,
+                        guide_document.fetched_at,
+                    ),
+                )
                 for chunk in guide_document.chunks:
                     embedding_json = json.dumps(embed_text(chunk.text), separators=(",", ":"))
                     keeper_connection.execute(
@@ -212,7 +246,7 @@ class GuideStore:
                         ("milo", guide_document.correlation_id, chunk.chunk_index, embedding_json),
                     )
 
-                return int(job_id)
+        return int(job_id)
 
     def summary(self) -> dict[str, int]:
         with self.connection() as connection:

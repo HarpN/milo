@@ -85,9 +85,13 @@ def _scrape_guide(request_message: struct_pb2.Struct, context: grpc.ServicerCont
             "entity_id": request.guide_url,
             "payload": {
                 "game_title": request.game_title,
+                "platform": request.platform,
                 "source": request.source,
                 "chunk_count": len(guide_document.chunks),
                 "summary": guide_document.summary,
+                "quality_views": request.quality_views,
+                "quality_age_days": request.quality_age_days,
+                "quality_score": guide_document.quality_score,
             },
         },
         agent_rationale="Guide extraction and normalization for strategy retrieval",
