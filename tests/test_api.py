@@ -9,6 +9,7 @@ from google.protobuf import empty_pb2, json_format, struct_pb2
 os.environ["JUDY_GRPC_TARGET"] = "127.0.0.1:50066"
 os.environ["OUTBOUND_SIGNATURE_SECRET"] = "milo-dev-secret"
 os.environ["SCRAPE_DB_PATH"] = ":memory:"
+os.environ["INBOUND_AUTH_TOKEN"] = "test-inbound-token"
 
 from app.grpc_server import create_server, guide_client, judy_client
 
@@ -35,6 +36,10 @@ def _scrape_call(channel: grpc.Channel):
     )
 
 
+def _scrape_metadata() -> tuple[tuple[str, str], ...]:
+    return (("x-milo-auth", "test-inbound-token"),)
+
+
 def test_health(channel: grpc.Channel) -> None:
     response = channel.unary_unary(
         "/milo.MiloService/Health",
@@ -47,11 +52,16 @@ def test_health(channel: grpc.Channel) -> None:
 
 
 def test_scrape_judge_mode(channel: grpc.Channel, monkeypatch) -> None:
+    monkeypatch.setattr(
+        guide_client,
+        "_fetch_html",
+        lambda _: "<html><body><main><h1>Guide</h1><p>Step one. Step two. Step three.</p></main></body></html>",
+    )
     monkeypatch.setattr(judy_client, "send_scrape", lambda proposal, commit: {"final_verdict": "APPROVED", "council_id": "cncl-1"})
 
     request = struct_pb2.Struct()
     json_format.ParseDict({"guide_url": "https://example.com/guide", "game_title": "Test Game", "commit": False}, request)
-    response = json_format.MessageToDict(_scrape_call(channel)(request))
+    response = json_format.MessageToDict(_scrape_call(channel)(request, metadata=_scrape_metadata()))
 
     assert response["commit"] is False
     assert response["judy_response"]["final_verdict"] == "APPROVED"
@@ -60,11 +70,26 @@ def test_scrape_judge_mode(channel: grpc.Channel, monkeypatch) -> None:
 
 
 def test_scrape_commit_mode(channel: grpc.Channel, monkeypatch) -> None:
+    monkeypatch.setattr(
+        guide_client,
+        "_fetch_html",
+        lambda _: "<html><body><main><h2>Guide</h2><p>Alpha beta. Gamma delta. Epsilon zeta.</p></main></body></html>",
+    )
     monkeypatch.setattr(judy_client, "send_scrape", lambda proposal, commit: {"committed": True, "decision": {"final_verdict": "APPROVED"}})
 
     request = struct_pb2.Struct()
     json_format.ParseDict({"guide_url": "https://example.com/guide", "game_title": "Test Game", "commit": True}, request)
-    response = json_format.MessageToDict(_scrape_call(channel)(request))
+    response = json_format.MessageToDict(_scrape_call(channel)(request, metadata=_scrape_metadata()))
 
     assert response["commit"] is True
     assert response["judy_response"]["committed"] is True
+
+
+def test_scrape_requires_auth(channel: grpc.Channel) -> None:
+    request = struct_pb2.Struct()
+    json_format.ParseDict({"guide_url": "https://example.com/guide", "game_title": "Test Game", "commit": False}, request)
+
+    with pytest.raises(grpc.RpcError) as rpc_error:
+        _scrape_call(channel)(request)
+
+    assert rpc_error.value.code() == grpc.StatusCode.UNAUTHENTICATED

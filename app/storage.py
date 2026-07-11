@@ -17,12 +17,14 @@ class GuideStore:
         else:
             self._persistent_connection = sqlite3.connect(":memory:", check_same_thread=False)
             self._persistent_connection.row_factory = sqlite3.Row
+            self._configure_connection(self._persistent_connection)
         self._initialize()
 
     @contextmanager
     def connection(self) -> Iterator[sqlite3.Connection]:
         if self._persistent_connection is not None:
             connection = self._persistent_connection
+            self._configure_connection(connection)
             yield connection
             connection.commit()
             return
@@ -30,13 +32,21 @@ class GuideStore:
         connection = sqlite3.connect(self.db_path, check_same_thread=False)
         connection.row_factory = sqlite3.Row
         try:
+            self._configure_connection(connection)
             yield connection
             connection.commit()
         finally:
             connection.close()
 
+    def _configure_connection(self, connection: sqlite3.Connection) -> None:
+        connection.execute(f"PRAGMA busy_timeout = {settings.sqlite_busy_timeout_ms}")
+        if str(self.db_path) != ":memory:":
+            connection.execute("PRAGMA journal_mode=WAL")
+            connection.execute("PRAGMA synchronous=NORMAL")
+
     def _initialize(self) -> None:
         with self.connection() as connection:
+            self._configure_connection(connection)
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS scrape_jobs (

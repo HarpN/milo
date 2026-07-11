@@ -6,10 +6,10 @@ from pydantic import BaseModel, Field
 
 
 class ScrapeRequest(BaseModel):
-    guide_url: str = Field(min_length=1)
-    game_title: str = Field(default="Unknown Game", min_length=1)
+    guide_url: str = Field(min_length=1, max_length=2048)
+    game_title: str = Field(default="Unknown Game", min_length=1, max_length=200)
     commit: bool = Field(default=False)
-    source: str = Field(default="web", min_length=1)
+    source: str = Field(default="web", min_length=1, max_length=64)
 
 
 class GuideChunk(BaseModel):

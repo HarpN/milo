@@ -45,8 +45,25 @@ def _health(_: empty_pb2.Empty, context: grpc.ServicerContext) -> struct_pb2.Str
     return _dict_to_struct(payload)
 
 
+def _is_authorized(context: grpc.ServicerContext) -> bool:
+    if not settings.inbound_auth_enabled:
+        return True
+
+    if not settings.inbound_auth_token:
+        return False
+
+    metadata = dict(context.invocation_metadata())
+    token = metadata.get(settings.inbound_auth_header.lower())
+    return token == settings.inbound_auth_token
+
+
 def _scrape_guide(request_message: struct_pb2.Struct, context: grpc.ServicerContext) -> struct_pb2.Struct:
     metrics["requests_total"] += 1
+
+    if not _is_authorized(context):
+        context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+        context.set_details("Missing or invalid inbound authentication metadata")
+        return struct_pb2.Struct()
 
     try:
         request = ScrapeRequest.model_validate(_struct_to_dict(request_message))
@@ -112,7 +129,28 @@ def create_server(bind_address: str | None = None) -> grpc.Server:
         ),
     }
     server.add_generic_rpc_handlers((grpc.method_handlers_generic_handler("milo.MiloService", handlers),))
-    bound_port = server.add_insecure_port(bind_address or f"{settings.host}:{settings.grpc_port}")
+
+    bind_target = bind_address or f"{settings.host}:{settings.grpc_port}"
+    if settings.grpc_tls_enabled:
+        with open(settings.grpc_tls_server_key_path, "rb") as key_file:
+            private_key = key_file.read()
+        with open(settings.grpc_tls_server_cert_path, "rb") as cert_file:
+            certificate_chain = cert_file.read()
+
+        root_certificates = None
+        if settings.grpc_tls_client_ca_cert_path:
+            with open(settings.grpc_tls_client_ca_cert_path, "rb") as ca_file:
+                root_certificates = ca_file.read()
+
+        credentials = grpc.ssl_server_credentials(
+            [(private_key, certificate_chain)],
+            root_certificates=root_certificates,
+            require_client_auth=settings.grpc_tls_require_client_auth,
+        )
+        bound_port = server.add_secure_port(bind_target, credentials)
+    else:
+        bound_port = server.add_insecure_port(bind_target)
+
     if not bound_port:
         raise RuntimeError("Failed to bind Milo gRPC server")
     server.bound_port = bound_port  # type: ignore[attr-defined]
