@@ -9,6 +9,7 @@ class Settings:
     service_version: str = os.getenv("SERVICE_VERSION", "0.1.0")
     host: str = os.getenv("HOST", "0.0.0.0")
     grpc_port: int = int(os.getenv("GRPC_PORT", "50056"))
+    grpc_max_workers: int = int(os.getenv("GRPC_MAX_WORKERS", "32"))
 
     judy_grpc_target: str = os.getenv("JUDY_GRPC_TARGET", "judy-council:50052")
     judy_timeout_seconds: float = float(os.getenv("JUDY_TIMEOUT_SECONDS", "10"))

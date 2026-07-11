@@ -46,7 +46,6 @@ class GuideStore:
 
     def _initialize(self) -> None:
         with self.connection() as connection:
-            self._configure_connection(connection)
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS scrape_jobs (

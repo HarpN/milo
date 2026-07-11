@@ -115,7 +115,7 @@ def _scrape_guide(request_message: struct_pb2.Struct, context: grpc.ServicerCont
 
 
 def create_server(bind_address: str | None = None) -> grpc.Server:
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=8))
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=settings.grpc_max_workers))
     handlers = {
         "Health": grpc.unary_unary_rpc_method_handler(
             _health,
