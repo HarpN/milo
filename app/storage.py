@@ -162,6 +162,75 @@ class GuideStore:
                 )
                 """
             )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS keeper_snapshots (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    entity_type TEXT NOT NULL,
+                    entity_key TEXT NOT NULL,
+                    version_label TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    CHECK (version_label IN ('LATEST', 'PREVIOUS', 'STABLE')),
+                    UNIQUE(entity_type, entity_key, version_label)
+                )
+                """
+            )
+
+    def _promote_snapshots(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        entity_type: str,
+        entity_key: str,
+        latest_payload_json: str,
+        created_at: str,
+    ) -> None:
+        current_latest = connection.execute(
+            """
+            SELECT payload_json, created_at
+            FROM keeper_snapshots
+            WHERE entity_type = ? AND entity_key = ? AND version_label = 'LATEST'
+            """,
+            (entity_type, entity_key),
+        ).fetchone()
+
+        if current_latest is not None and str(current_latest["payload_json"]) != latest_payload_json:
+            connection.execute(
+                """
+                INSERT OR REPLACE INTO keeper_snapshots (
+                    entity_type, entity_key, version_label, payload_json, created_at
+                ) VALUES (?, ?, 'PREVIOUS', ?, ?)
+                """,
+                (entity_type, entity_key, str(current_latest["payload_json"]), str(current_latest["created_at"])),
+            )
+
+            has_stable = connection.execute(
+                """
+                SELECT 1
+                FROM keeper_snapshots
+                WHERE entity_type = ? AND entity_key = ? AND version_label = 'STABLE'
+                """,
+                (entity_type, entity_key),
+            ).fetchone()
+            if has_stable is None:
+                connection.execute(
+                    """
+                    INSERT OR REPLACE INTO keeper_snapshots (
+                        entity_type, entity_key, version_label, payload_json, created_at
+                    ) VALUES (?, ?, 'STABLE', ?, ?)
+                    """,
+                    (entity_type, entity_key, str(current_latest["payload_json"]), str(current_latest["created_at"])),
+                )
+
+        connection.execute(
+            """
+            INSERT OR REPLACE INTO keeper_snapshots (
+                entity_type, entity_key, version_label, payload_json, created_at
+            ) VALUES (?, ?, 'LATEST', ?, ?)
+            """,
+            (entity_type, entity_key, latest_payload_json, created_at),
+        )
 
     def record_scrape(self, guide_document) -> int:
         with self.connection() as connection:
@@ -216,6 +285,26 @@ class GuideStore:
                         guide_document.fetched_at,
                     ),
                 )
+
+                snapshot_payload = {
+                    "guide_url": guide_document.guide_url,
+                    "game_title": guide_document.game_title,
+                    "platform": guide_document.platform,
+                    "quality_views": int(guide_document.quality_views),
+                    "quality_age_days": int(guide_document.quality_age_days),
+                    "quality_score": float(guide_document.quality_score),
+                    "correlation_id": guide_document.correlation_id,
+                    "chunk_count": len(guide_document.chunks),
+                }
+                entity_key = f"{guide_document.guide_url}::{guide_document.platform}"
+                self._promote_snapshots(
+                    keeper_connection,
+                    entity_type="guide",
+                    entity_key=entity_key,
+                    latest_payload_json=json.dumps(snapshot_payload, separators=(",", ":")),
+                    created_at=guide_document.fetched_at,
+                )
+
                 for chunk in guide_document.chunks:
                     embedding_json = json.dumps(embed_text(chunk.text), separators=(",", ":"))
                     keeper_connection.execute(
