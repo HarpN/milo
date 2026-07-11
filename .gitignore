@@ -10,3 +10,11 @@ htmlcov/
 data/
 *.sqlite3
 *.db
+certs/**/*.crt
+certs/**/*.key
+certs/**/*.pem
+certs/**/*.csr
+certs/**/*.srl
+certs/**/*.cnf
+certs/tmp/
+!certs/README.md

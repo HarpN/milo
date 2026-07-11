@@ -1,0 +1,15 @@
+services:
+  milo:
+    environment:
+      - GRPC_TLS_ENABLED=true
+      - GRPC_TLS_SERVER_CERT_PATH=/certs/milo/server.crt
+      - GRPC_TLS_SERVER_KEY_PATH=/certs/milo/server.key
+      - GRPC_TLS_REQUIRE_CLIENT_AUTH=true
+      - GRPC_TLS_CLIENT_CA_CERT_PATH=/certs/ca/clients-ca.crt
+      - JUDY_TLS_ENABLED=true
+      - JUDY_MTLS_ENABLED=true
+      - JUDY_TLS_CA_CERT_PATH=/certs/ca/judy-ca.crt
+      - JUDY_TLS_CLIENT_CERT_PATH=/certs/milo/client.crt
+      - JUDY_TLS_CLIENT_KEY_PATH=/certs/milo/client.key
+    volumes:
+      - ./certs:/certs:ro
