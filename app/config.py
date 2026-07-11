@@ -37,8 +37,13 @@ class Settings:
     inbound_auth_header: str = os.getenv("INBOUND_AUTH_HEADER", "x-milo-auth")
 
     scrape_db_path: str = os.getenv("SCRAPE_DB_PATH", "data/milo.sqlite3")
+    keeper_db_path: str = os.getenv("KEEPER_DB_PATH", "../TheKeeper/keeper_blended.db")
+    keeper_export_enabled: bool = os.getenv("KEEPER_EXPORT_ENABLED", "true").lower() == "true"
     sqlite_busy_timeout_ms: int = int(os.getenv("SQLITE_BUSY_TIMEOUT_MS", "5000"))
     default_source: str = os.getenv("GUIDE_SOURCE", "web")
+    embedding_dimensions: int = int(os.getenv("EMBEDDING_DIMENSIONS", "256"))
+    sqlite_vss_enabled: bool = os.getenv("SQLITE_VSS_ENABLED", "false").lower() == "true"
+    sqlite_vss_extension_path: str = os.getenv("SQLITE_VSS_EXTENSION_PATH", "")
 
 
 settings = Settings()
