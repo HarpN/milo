@@ -45,5 +45,20 @@ class Settings:
     sqlite_vss_enabled: bool = os.getenv("SQLITE_VSS_ENABLED", "false").lower() == "true"
     sqlite_vss_extension_path: str = os.getenv("SQLITE_VSS_EXTENSION_PATH", "")
 
+    allowed_guide_domains: tuple[str, ...] = tuple(
+        domain.strip().lower()
+        for domain in os.getenv(
+            "ALLOWED_GUIDE_DOMAINS",
+            "psnprofiles.com,www.psnprofiles.com,ign.com,www.ign.com,powerpyx.com,www.powerpyx.com",
+        ).split(",")
+        if domain.strip()
+    )
+    sanitizer_version: str = os.getenv("SANITIZER_VERSION", "milo-sanitizer-v1")
+    min_trust_confidence: float = float(os.getenv("MIN_TRUST_CONFIDENCE", "0.65"))
+    max_chunk_chars: int = int(os.getenv("MAX_CHUNK_CHARS", "2200"))
+    max_response_bytes: int = int(os.getenv("MAX_RESPONSE_BYTES", "3000000"))
+    domain_request_cooldown_seconds: float = float(os.getenv("DOMAIN_REQUEST_COOLDOWN_SECONDS", "2.0"))
+    resolved_security_event_retention_days: int = int(os.getenv("RESOLVED_SECURITY_EVENT_RETENTION_DAYS", "30"))
+
 
 settings = Settings()

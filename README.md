@@ -23,9 +23,30 @@ Milo follows the same contract-first pattern as the other agents in this stack.
 6. Milo sends the proposal to Judy over gRPC.
 7. Judy returns the review or commit response.
 
+## Consolidated Delivery Summary
+
+Recent work was grouped into four coherent tracks:
+
+1. Secure ingest and trust metadata: allowlist enforcement, sanitizer gating, and trust fields propagated to Keeper.
+2. Moderation lifecycle: security-event review statuses plus retention dry-run/apply workflows.
+3. Boundary cleanup and auditability: dashboard writes moved to Milo APIs, plus actor-attributed audit trail.
+4. Runtime guardrails: per-domain fetch cooldown and response-size caps to reduce scrape abuse and payload risk.
+
+This keeps behavior changes aligned with a single security and operability objective rather than separate one-off patches.
+
+## gRPC Methods
+
+- `Health`
+- `ScrapeGuide`
+- `ListSecurityEvents`
+- `ReviewSecurityEvent`
+- `ApplySecurityEventRetention`
+- `ListSecurityEventAudit`
+
 ## Environment
 
 - `GRPC_PORT`: inbound gRPC port, default `50056`
+- `GRPC_MAX_WORKERS`: gRPC thread pool size for concurrent request handling (default `32`)
 - `JUDY_GRPC_TARGET`: Judy gRPC endpoint
 - `JUDY_TLS_ENABLED`: use TLS for outbound Judy calls when set to `true`
 - `JUDY_TLS_CA_CERT_PATH`: optional CA bundle path for Judy TLS validation
@@ -46,6 +67,13 @@ Milo follows the same contract-first pattern as the other agents in this stack.
 - `GUIDE_SOURCE`: label for the origin of scraped content
 - `SCRAPE_DB_PATH`: local SQLite path for scrape history
 - `SQLITE_BUSY_TIMEOUT_MS`: busy timeout for SQLite lock contention control
+- `ALLOWED_GUIDE_DOMAINS`: comma-delimited source-domain allowlist for guide ingestion
+- `SANITIZER_VERSION`: label recorded in trust metadata for approved guide chunks
+- `MIN_TRUST_CONFIDENCE`: threshold below which sanitized content is rejected
+- `MAX_CHUNK_CHARS`: maximum sanitizer text window for normalization/chunking
+- `MAX_RESPONSE_BYTES`: hard cap for fetched guide response payload size
+- `DOMAIN_REQUEST_COOLDOWN_SECONDS`: minimum interval between same-domain fetches per Milo runtime
+- `RESOLVED_SECURITY_EVENT_RETENTION_DAYS`: default retention window for resolved security events
 
 ## Local Run
 
@@ -65,6 +93,14 @@ docker run --rm -p 50056:50056 milo-guide-scraper
 ```bash
 docker compose up --build
 ```
+
+For unified workspace startup via `scripts/launch_all.ps1`, Milo compose now ships with local inbound auth defaults:
+
+- `INBOUND_AUTH_ENABLED=true`
+- `INBOUND_AUTH_HEADER=x-milo-auth`
+- `INBOUND_AUTH_TOKEN=local-dev-milo-token`
+
+These match scraper dashboard defaults from `scraper/.env.example` for local development.
 
 ### Compose mTLS Profile
 
@@ -100,6 +136,20 @@ If Milo/Judy are not currently running, verify cert trust only:
 pytest
 ```
 
+## Security Smoke Validation
+
+From repository root:
+
+```powershell
+$env:MILO_GRPC_TARGET="127.0.0.1:50056"
+$env:MILO_AUTH_HEADER="x-milo-auth"
+$env:MILO_AUTH_TOKEN="<token>"
+$env:MILO_ADMIN_ACTOR="security-smoke-script"
+c:/Users/Giraffe/Documents/Repo/.venv/Scripts/python.exe scripts/security_v2_smoke.py
+```
+
+The smoke script verifies end-to-end moderation behavior through service APIs (not direct DB writes): rejection, event listing, moderation updates, retention preview/apply, and audit listing.
+
 ## Validation And Conventions
 
 - Local validation passes with `pytest` using the workspace venv Python interpreter.
@@ -133,3 +183,18 @@ Milo keeps its own scrape history and chunk records in SQLite. It should not sha
 ## Notes
 
 Guide retrieval now uses live HTML extraction with semantic-content filtering (main/article-focused and nav/footer/script stripping), then sentence-aware chunking to preserve context.
+
+## Changelog
+
+### v0.3.0 - 2026-07-14
+
+Added:
+
+- Secure-ingest controls: HTTPS allowlist, sanitizer gating, response-size caps, and per-domain cooldown.
+- Moderation lifecycle APIs and workflows: event list, review status updates, retention dry-run/apply.
+- Actor-attributed moderation audit trail and list-audit API.
+
+Changed:
+
+- Dashboard boundary cleanup so admin moderation flows through Milo gRPC instead of direct DB writes.
+- Added local compose auth-token defaults so monorepo one-command launch works without extra Milo auth wiring.

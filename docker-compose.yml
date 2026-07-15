@@ -13,6 +13,9 @@ services:
       - OUTBOUND_SIGNATURE_HEADER=X-Milo-Signature
       - OUTBOUND_SIGNATURE_SECRET=milo-dev-secret
       - OUTBOUND_KEY_ID=milo-k1
+      - INBOUND_AUTH_ENABLED=true
+      - INBOUND_AUTH_HEADER=x-milo-auth
+      - INBOUND_AUTH_TOKEN=local-dev-milo-token
       - SCRAPE_DB_PATH=/data/milo.sqlite3
       - GUIDE_SOURCE=web
     volumes:

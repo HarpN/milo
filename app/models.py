@@ -20,6 +20,12 @@ class GuideChunk(BaseModel):
     heading: str
     text: str
     token_count: int
+    trust_status: str = Field(default="approved", pattern="^(approved|rejected)$")
+    trust_confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    source_domain: str = Field(default="", min_length=0, max_length=255)
+    content_hash: str = Field(default="", min_length=0, max_length=128)
+    sanitizer_version: str = Field(default="", min_length=0, max_length=128)
+    safety_notes: str = Field(default="", min_length=0, max_length=512)
 
 
 class GuideDocument(BaseModel):
@@ -35,6 +41,10 @@ class GuideDocument(BaseModel):
     quality_score: float = Field(default=0.0, ge=0.0)
     chunks: list[GuideChunk] = Field(default_factory=list)
     raw_payload: dict[str, Any] = Field(default_factory=dict)
+    trust_status: str = Field(default="approved", pattern="^(approved|rejected)$")
+    trust_confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    source_domain: str = Field(default="", min_length=0, max_length=255)
+    sanitizer_version: str = Field(default="", min_length=0, max_length=128)
 
 
 class JudyProposal(BaseModel):
