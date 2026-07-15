@@ -145,7 +145,7 @@ $env:MILO_GRPC_TARGET="127.0.0.1:50056"
 $env:MILO_AUTH_HEADER="x-milo-auth"
 $env:MILO_AUTH_TOKEN="<token>"
 $env:MILO_ADMIN_ACTOR="security-smoke-script"
-c:/Users/Giraffe/Documents/Repo/.venv/Scripts/python.exe scripts/security_v2_smoke.py
+.\.venv\Scripts\python.exe scripts/security_v2_smoke.py
 ```
 
 The smoke script verifies end-to-end moderation behavior through service APIs (not direct DB writes): rejection, event listing, moderation updates, retention preview/apply, and audit listing.

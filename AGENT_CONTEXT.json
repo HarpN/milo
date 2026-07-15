@@ -31,7 +31,7 @@
       "name": "security_smoke",
       "shell": "powershell",
       "cwd": ".",
-      "command": "$env:MILO_GRPC_TARGET='127.0.0.1:50056'; $env:MILO_AUTH_HEADER='x-milo-auth'; $env:MILO_AUTH_TOKEN='<token>'; $env:MILO_ADMIN_ACTOR='security-smoke-script'; c:/Users/Giraffe/Documents/Repo/.venv/Scripts/python.exe scripts/security_v2_smoke.py"
+      "command": "$env:MILO_GRPC_TARGET='127.0.0.1:50056'; $env:MILO_AUTH_HEADER='x-milo-auth'; $env:MILO_AUTH_TOKEN='<token>'; $env:MILO_ADMIN_ACTOR='security-smoke-script'; .\\.venv\\Scripts\\python.exe scripts/security_v2_smoke.py"
     }
   ],
   "entrypoint_files": [
