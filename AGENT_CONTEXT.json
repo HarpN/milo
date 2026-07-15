@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0.0",
+  "project": {
+    "name": "milo",
+    "description": "Guide scraping, moderation lifecycle, and trusted content normalization service",
+    "default_branch": "main"
+  },
+  "runtime": {
+    "primary_mode": "docker_compose",
+    "grpc_port": 50056
+  },
+  "commands": {
+    "start": {
+      "shell": "powershell",
+      "cwd": ".",
+      "command": "docker compose up --build -d"
+    },
+    "stop": {
+      "shell": "powershell",
+      "cwd": ".",
+      "command": "docker compose down"
+    },
+    "test": {
+      "shell": "powershell",
+      "cwd": ".",
+      "command": "pytest"
+    }
+  },
+  "optional_checks": [
+    {
+      "name": "security_smoke",
+      "shell": "powershell",
+      "cwd": ".",
+      "command": "$env:MILO_GRPC_TARGET='127.0.0.1:50056'; $env:MILO_AUTH_HEADER='x-milo-auth'; $env:MILO_AUTH_TOKEN='<token>'; $env:MILO_ADMIN_ACTOR='security-smoke-script'; c:/Users/Giraffe/Documents/Repo/.venv/Scripts/python.exe scripts/security_v2_smoke.py"
+    }
+  ],
+  "entrypoint_files": [
+    "README.md",
+    "app/grpc_server.py",
+    "app/guide_client.py",
+    "app/storage.py",
+    "app/config.py",
+    "proto/milo.proto",
+    "docker-compose.yml"
+  ]
+}
